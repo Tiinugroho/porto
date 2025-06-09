@@ -1,23 +1,28 @@
-'use client'
-import React, { useRef, useEffect, ReactNode } from "react";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+"use client"
 
-gsap.registerPlugin(ScrollTrigger);
+import type React from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
+import gsap from "gsap"
+import { ScrollTrigger } from "gsap/ScrollTrigger"
 
-interface AnimatedContentProps {
-  children: ReactNode;
-  distance?: number;
-  direction?: "vertical" | "horizontal";
-  reverse?: boolean;
-  duration?: number;
-  ease?: string | ((progress: number) => number);
-  initialOpacity?: number;
-  animateOpacity?: boolean;
-  scale?: number;
-  threshold?: number;
-  delay?: number;
-  onComplete?: () => void;
+// Register ScrollTrigger plugin
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger)
+}
+
+export interface AnimatedContentProps {
+  children: ReactNode
+  distance?: number
+  direction?: "horizontal" | "vertical"
+  reverse?: boolean
+  duration?: number
+  ease?: string
+  initialOpacity?: number
+  animateOpacity?: boolean
+  scale?: number
+  threshold?: number
+  delay?: number
+  className?: string
 }
 
 const AnimatedContent: React.FC<AnimatedContentProps> = ({
@@ -25,66 +30,128 @@ const AnimatedContent: React.FC<AnimatedContentProps> = ({
   distance = 100,
   direction = "vertical",
   reverse = false,
-  duration = 0.8,
-  ease = "power3.out",
+  duration = 1,
+  ease = "power2.out",
   initialOpacity = 0,
   animateOpacity = true,
   scale = 1,
   threshold = 0.1,
   delay = 0,
-  onComplete,
+  className = "",
 }) => {
-  const ref = useRef<HTMLDivElement>(null);
+  const elementRef = useRef<HTMLDivElement>(null)
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    setIsMounted(true)
+  }, [])
 
-    const axis = direction === "horizontal" ? "x" : "y";
-    const offset = reverse ? -distance : distance;
-    const startPct = (1 - threshold) * 100;
+  useEffect(() => {
+    if (!isMounted || typeof window === "undefined") return
 
-    gsap.set(el, {
-      [axis]: offset,
-      scale,
-      opacity: animateOpacity ? initialOpacity : 1,
-    });
+    const element = elementRef.current
+    if (!element) return
 
-    gsap.to(el, {
-      [axis]: 0,
+    // Clear any existing ScrollTriggers for this element
+    ScrollTrigger.getAll().forEach((trigger) => {
+      if (trigger.trigger === element) {
+        trigger.kill()
+      }
+    })
+
+    // Calculate initial transform values
+    const getInitialTransform = () => {
+      const multiplier = reverse ? -1 : 1
+
+      if (direction === "horizontal") {
+        return {
+          x: distance * multiplier,
+          y: 0,
+        }
+      } else {
+        return {
+          x: 0,
+          y: distance * multiplier,
+        }
+      }
+    }
+
+    const initialTransform = getInitialTransform()
+
+    // Set initial state
+    const initialState: any = {
+      ...initialTransform,
+      scale: scale !== 1 ? scale : undefined,
+      force3D: true,
+    }
+
+    if (animateOpacity) {
+      initialState.opacity = initialOpacity
+    }
+
+    gsap.set(element, initialState)
+
+    // Create animation
+    const animation = gsap.to(element, {
+      x: 0,
+      y: 0,
       scale: 1,
-      opacity: 1,
+      opacity: animateOpacity ? 1 : undefined,
       duration,
       ease,
       delay,
-      onComplete,
-      scrollTrigger: {
-        trigger: el,
-        start: `top ${startPct}%`,
-        toggleActions: "play none none none",
-        once: true,
-      },
-    });
+      force3D: true,
+    })
 
+    // Create ScrollTrigger
+    let scrollTrigger: ScrollTrigger | null = null
+
+    try {
+      scrollTrigger = ScrollTrigger.create({
+        trigger: element,
+        start: `top ${100 - threshold * 100}%`,
+        end: `bottom ${threshold * 100}%`,
+        animation: animation,
+        toggleActions: "play none none reverse",
+        onToggle: (self) => {
+          // Optional: Add any toggle logic here
+        },
+      })
+    } catch (error) {
+      console.warn("ScrollTrigger creation failed:", error)
+      // Fallback: just play the animation without scroll trigger
+      animation.play()
+    }
+
+    // Cleanup function
     return () => {
-      ScrollTrigger.getAll().forEach((t) => t.kill());
-      gsap.killTweensOf(el);
-    };
-  }, [
-    distance,
-    direction,
-    reverse,
-    duration,
-    ease,
-    initialOpacity,
-    animateOpacity,
-    scale,
-    threshold,
-    delay,
-    onComplete,
-  ]);
+      try {
+        if (scrollTrigger) {
+          scrollTrigger.kill()
+        }
+        if (animation) {
+          animation.kill()
+        }
+      } catch (error) {
+        console.warn("Animation cleanup failed:", error)
+      }
+    }
+  }, [isMounted, distance, direction, reverse, duration, ease, initialOpacity, animateOpacity, scale, threshold, delay])
 
-  return <div ref={ref}>{children}</div>;
-};
+  // Don't render anything on server-side
+  if (!isMounted) {
+    return (
+      <div className={className} style={{ opacity: 0 }}>
+        {children}
+      </div>
+    )
+  }
 
-export default AnimatedContent;
+  return (
+    <div ref={elementRef} className={className}>
+      {children}
+    </div>
+  )
+}
+
+export default AnimatedContent
