@@ -11,6 +11,8 @@ import TechStackCarousel from "./components/TechStackCarousel/TechStackCarousel"
 import AboutSection from "./components/AboutSection/AboutSection"
 import CardSwap, { Card } from "./components/CardSwap/CardSwap"
 import { downloadCV } from "../lib/download"
+import ContactSection from "./components/ContactSection/ContactSection"
+import Footer from "./components/Footer/footer"
 
 export default function Home() {
   return (
@@ -135,14 +137,7 @@ export default function Home() {
         <div className="container mx-auto relative z-10">
           {/* Header Section - Fixed Layout */}
           <div className="text-center mb-20">
-            {/* Badge dengan bintang di atas */}
-            <div className="flex flex-col items-center gap-4 mb-6">
-              <div className="text-[#C6F10E] text-2xl">⭐</div>
-              <div className="px-4 py-2 rounded-full bg-[#C6F10E]/10 border border-[#C6F10E]/20">
-                <span className="text-[#C6F10E] text-sm font-medium">Featured Projects</span>
-              </div>
-            </div>
-
+            
             <SplitText
               text="My Latest Work"
               className="text-5xl md:text-6xl font-bold text-white mb-6"
@@ -154,7 +149,7 @@ export default function Home() {
             />
 
             <BlurText
-              text="A collection of projects that showcase my expertise in modern web development, from concept to deployment."
+              text="Preview Hasil Project dan Pekerjaan saya dalam beberapa tahun terakhir yang mengedepankan Kepuasan, Fungsionalitas dan Pelayanan."
               delay={30}
               animateBy="words"
               direction="top"
@@ -609,6 +604,12 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Contact Section */}
+      <ContactSection />
+
+      {/* Footer Section */}
+      <Footer />
     </div>
   )
 }
